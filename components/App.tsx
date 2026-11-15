@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, Menu, MessageSquareQuote, Skull, Telescope } from "lucide-react";
-import { DEFAULT_PROMPT, DEFAULT_SETTINGS, PROMPT_V1 } from "@/lib/defaults";
+import { DEFAULT_PROMPT, DEFAULT_SETTINGS, PROMPT_V1, PROMPT_V2 } from "@/lib/defaults";
 import { buildSystem, history, streamChat, uid, usePersisted } from "@/lib/client";
 import type { Chat, Msg, Project, Provider, Settings } from "@/lib/types";
 import { Composer } from "./Composer";
@@ -20,7 +20,7 @@ const SUGGESTIONS = [
 
 export default function App() {
   const [settings, setSettings] = usePersisted<Settings>("opengrok:settings", DEFAULT_SETTINGS, (s) =>
-    s.systemPrompt === PROMPT_V1 ? { ...s, systemPrompt: DEFAULT_PROMPT } : s,
+    s.systemPrompt === PROMPT_V1 || s.systemPrompt === PROMPT_V2 ? { ...s, systemPrompt: DEFAULT_PROMPT } : s,
   );
   const [chats, setChats] = usePersisted<Chat[]>("opengrok:chats", []);
   const [projects, setProjects] = usePersisted<Project[]>("opengrok:projects", []);

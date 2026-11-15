@@ -14,6 +14,8 @@ const textOf = (n: ReactNode): string =>
   : isValidElement(n) ? textOf((n.props as { children?: ReactNode }).children)
   : "";
 
+const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
+
 function CopyBtn({ text, label }: { text: string; label?: string }) {
   const [ok, setOk] = useState(false);
   return (
@@ -69,24 +71,37 @@ export function Message({ m, streaming, last, onRegen }: { m: Msg; streaming: bo
 
   const { think, text, open } = parse(m);
   const thinking = streaming && (!text || open);
+  const label = !text && m.status ? m.status : "Thinking";
+  const cited = m.sources?.length
+    ? text.replace(/\[(\d{1,2})\](?!\()/g, (s, n) => (m.sources![+n - 1] ? `[[${n}]](${m.sources![+n - 1].url})` : s))
+    : text;
   return (
     <div className="group">
       {(think || thinking) && (
         <details className="mb-2">
           <summary className="flex cursor-pointer list-none items-center gap-1 text-sm text-mut [&::-webkit-details-marker]:hidden">
             <ChevronRight size={14} className="transition-transform [details[open]>summary>&]:rotate-90" />
-            {thinking ? <span className="shimmer font-medium">Thinking</span> : <span>Thought for {m.ms ? `${Math.max(1, Math.round(m.ms / 1000))}s` : "a moment"}</span>}
+            {thinking ? <span className="shimmer font-medium">{label}</span> : <span>Thought for {m.ms ? `${Math.max(1, Math.round(m.ms / 1000))}s` : "a moment"}</span>}
           </summary>
           {think && <div className="mt-2 whitespace-pre-wrap border-l-2 border-line pl-3 text-sm leading-relaxed text-mut">{think}</div>}
         </details>
       )}
       {text && (
         <div className="md">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={components}>{text}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={components}>{cited}</ReactMarkdown>
           {streaming && !open && <span className="ml-1 inline-block size-2 animate-pulse rounded-full bg-fg align-middle" />}
         </div>
       )}
-      {!think && !text && streaming && <span className="shimmer font-medium">Thinking</span>}
+      {!!m.sources?.length && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {m.sources.map((s, i) => (
+            <a key={i} href={s.url} target="_blank" rel="noreferrer noopener" title={s.title} className="flex max-w-[220px] items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs text-mut hover:bg-hover hover:text-fg">
+              <span className="font-medium text-fg">{i + 1}</span>
+              <span className="truncate">{host(s.url)}</span>
+            </a>
+          ))}
+        </div>
+      )}
       {m.error && (
         <div className="mt-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
           {m.error}

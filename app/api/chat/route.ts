@@ -1,8 +1,9 @@
 import { friendly, headersFor, parseBase } from "@/lib/upstream";
+import { research, sourcesBlock, type SearchCfg } from "@/lib/search";
 import type { Kind } from "@/lib/types";
 
 // Local proxy: browser -> here -> provider. Avoids CORS; keys never leave your machine except to the provider you chose.
-// Streams NDJSON lines: {"t":"text"|"think"|"error","d":string}
+// Streams NDJSON lines: {"t":"text"|"think"|"status"|"sources"|"error","d":string}
 
 type Body = {
   kind: Kind;
@@ -11,6 +12,7 @@ type Body = {
   model: string;
   system: string;
   messages: { role: string; content: string }[];
+  search?: SearchCfg & { query: string };
 };
 
 const enc = new TextEncoder();
@@ -45,13 +47,29 @@ export async function POST(req: Request) {
 
   const anth = b.kind === "anthropic";
   const url = anth ? `${base}/v1/messages` : `${base}/chat/completions`;
-  const payload = anth
-    ? { model: b.model, max_tokens: 8192, system: b.system, messages: b.messages, stream: true }
-    : { model: b.model, messages: [{ role: "system", content: b.system }, ...b.messages], stream: true };
 
   const stream = new ReadableStream({
     async start(ctrl) {
       try {
+        let system = b.system;
+        const q = b.search?.query?.trim().slice(0, 300);
+        if (b.search && q) {
+          ctrl.enqueue(line("status", `Searching the web for “${q.slice(0, 80)}”`));
+          try {
+            const hits = await research(q, b.search, req.signal);
+            ctrl.enqueue(line("sources", JSON.stringify(hits.map(({ title, url, snippet }) => ({ title, url, snippet })))));
+            system += sourcesBlock(q, hits);
+          } catch (e) {
+            if (req.signal.aborted) return;
+            ctrl.enqueue(line("error", `Search failed: ${(e as Error).message}. Answering without it.`));
+            system += "\n\nA web search was attempted but failed. Tell the user you could not search, and answer from your own knowledge if you can.";
+          }
+          ctrl.enqueue(line("status", ""));
+        }
+
+        const payload = anth
+          ? { model: b.model, max_tokens: 8192, system, messages: b.messages, stream: true }
+          : { model: b.model, messages: [{ role: "system", content: system }, ...b.messages], stream: true };
         const r = await fetch(url, {
           method: "POST",
           headers: headersFor(b.kind, b.apiKey),

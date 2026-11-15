@@ -31,4 +31,6 @@ export const DEFAULT_SETTINGS: Settings = {
   memory: "",
   theme: "system",
   contextChars: 60000,
+  searchOn: false,
+  search: { engine: "ddg", url: "", key: "" },
 };

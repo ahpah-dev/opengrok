@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Chat, Msg, Provider, Settings } from "./types";
+import type { Chat, Msg, Project, Provider, Settings } from "./types";
 
 export const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -37,11 +37,30 @@ export function parse(m: Msg) {
   return { think: think.trim(), text: text.trimStart(), open };
 }
 
-export function buildSystem(s: Settings) {
+const FENCE = "```";
+const fenced = (f: { name: string; text: string }) => `${FENCE}${f.name}\n${f.text}\n${FENCE}`;
+
+export function buildSystem(s: Settings, project?: Project) {
   return (
     `${s.systemPrompt}\n\nCurrent date: ${new Date().toDateString()}.` +
-    (s.memory.trim() ? `\n\nThings the user asked you to remember:\n${s.memory.trim()}` : "")
+    (s.memory.trim() ? `\n\nThings the user asked you to remember:\n${s.memory.trim()}` : "") +
+    (project
+      ? `\n\nThis chat is inside the project "${project.name}". Follow its instructions:\n${project.instructions.trim() || "(none)"}` +
+        (project.files.length ? `\n\nProject reference files:\n\n${project.files.map(fenced).join("\n\n")}` : "")
+      : "")
   );
+}
+
+// Read text files picked by the user (size-capped; rejects binaries).
+export async function readTextFiles(list: FileList | null) {
+  const out: { name: string; text: string }[] = [];
+  for (const f of Array.from(list ?? [])) {
+    if (f.size > 200_000) { alert(`${f.name} is over 200 KB. Attach small text files only.`); continue; }
+    const text = await f.text();
+    if (text.includes("\u0000")) { alert(`${f.name} looks binary; only text files are supported.`); continue; }
+    out.push({ name: f.name, text });
+  }
+  return out;
 }
 
 // Newest-first char budget; always keeps the latest message, never starts on an assistant turn.
@@ -57,7 +76,7 @@ export function history(msgs: Msg[], max: number) {
   return out
     .map((m) => {
       if (m.role === "assistant") return { role: m.role, content: parse(m).text };
-      const files = (m.files ?? []).map((f) => `\`\`\`${f.name}\n${f.text}\n\`\`\``).join("\n\n");
+      const files = (m.files ?? []).map(fenced).join("\n\n");
       return { role: m.role, content: files ? `${files}\n\n${m.content}` : m.content };
     })
     .filter((m) => m.content.trim());
@@ -65,9 +84,14 @@ export function history(msgs: Msg[], max: number) {
 
 export async function streamChat(
   p: Provider,
-  body: { model: string; system: string; messages: { role: string; content: string }[] },
+  body: {
+    model: string;
+    system: string;
+    messages: { role: string; content: string }[];
+    search?: { engine: string; url: string; key: string; query: string };
+  },
   signal: AbortSignal,
-  on: (e: { t: "text" | "think" | "error"; d: string }) => void,
+  on: (e: { t: "text" | "think" | "status" | "sources" | "error"; d: string }) => void,
 ) {
   const r = await fetch("/api/chat", {
     method: "POST",

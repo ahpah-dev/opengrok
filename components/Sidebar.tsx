@@ -1,6 +1,6 @@
 "use client";
 import { useState, type ReactNode } from "react";
-import { Monitor, Moon, Pencil, Search, Settings as Cog, SquarePen, Sun, Trash2 } from "lucide-react";
+import { Folder, Monitor, Moon, Pencil, Search, Settings as Cog, SquarePen, Sun, Trash2 } from "lucide-react";
 import { Logo } from "./Logo";
 import { group } from "@/lib/client";
 import type { Chat, Settings } from "@/lib/types";
@@ -16,6 +16,7 @@ export function Sidebar(p: {
   theme: Theme;
   setOpen: (v: boolean) => void;
   onNew: () => void;
+  onProjects: () => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
@@ -44,6 +45,7 @@ export function Sidebar(p: {
         {row(<Logo size={20} />, "OpenGrok", () => p.setOpen(!open))}
         {row(<SquarePen size={20} />, "New chat", () => { p.onNew(); if (innerWidth < 768) p.setOpen(false); })}
         {row(<Search size={20} />, "Search", () => { p.setOpen(true); setSearching(true); })}
+        {row(<Folder size={20} />, "Projects", () => { p.onProjects(); if (innerWidth < 768) p.setOpen(false); })}
         {open && searching && (
           <input
             autoFocus

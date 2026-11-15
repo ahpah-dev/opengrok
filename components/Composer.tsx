@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowUp, FileText, Plus, Square, X } from "lucide-react";
+import { ArrowUp, FileText, Globe, Plus, Square, X } from "lucide-react";
+import { readTextFiles } from "@/lib/client";
 import type { Msg } from "@/lib/types";
 
-const MAX_FILE = 200_000;
-
-export function Composer({ busy, onSend, onStop, picker, placeholder = "What do you want to know?", autoFocus }: {
+export function Composer({ busy, onSend, onStop, picker, search, onSearch, placeholder = "What do you want to know?", autoFocus }: {
+  search: boolean;
+  onSearch: () => void;
   busy: boolean;
   onSend: (text: string, files: Msg["files"]) => void;
   onStop: () => void;
@@ -34,12 +35,8 @@ export function Composer({ busy, onSend, onStop, picker, placeholder = "What do 
   };
 
   async function attach(list: FileList | null) {
-    for (const f of Array.from(list ?? [])) {
-      if (f.size > MAX_FILE) { alert(`${f.name} is over 200 KB. Attach text files only, and keep them small.`); continue; }
-      const t = await f.text();
-      if (t.includes("\0")) { alert(`${f.name} looks binary; only text files are supported.`); continue; }
-      setFiles((fs) => [...fs, { name: f.name, text: t }]);
-    }
+    const added = await readTextFiles(list);
+    setFiles((fs) => [...fs, ...added]);
     if (pickFile.current) pickFile.current.value = "";
   }
 
@@ -72,6 +69,13 @@ export function Composer({ busy, onSend, onStop, picker, placeholder = "What do 
           }}
           className="max-h-56 min-h-8 flex-1 resize-none bg-transparent py-1 leading-6 outline-none placeholder:text-mut"
         />
+        <button
+          onClick={onSearch}
+          title={search ? "Web search on" : "Web search off"}
+          className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm ${search ? "border-fg" : "border-line text-mut hover:bg-hover"}`}
+        >
+          <Globe size={15} /> <span className="max-sm:hidden">Search</span>
+        </button>
         {picker}
         {busy ? (
           <button onClick={onStop} title="Stop" className="grid size-8 shrink-0 place-items-center rounded-full bg-fg text-bg">

@@ -78,6 +78,16 @@ export function SettingsModal({ s, chats, patch, onClose, onClear }: {
             <textarea className={inp + " h-28"} value={s.memory} placeholder="I'm a backend dev. I prefer Rust. Metric units." onChange={(e) => patch({ memory: e.target.value })} />
           </Section>
 
+          <Section title="Web search" hint="Toggle it with the Search button in the chat box. The app searches, reads the top pages itself, and gives the model cited sources. Works with any model, including local ones.">
+            <select className={inp + " mb-2"} value={s.search.engine} onChange={(e) => patch({ search: { ...s.search, engine: e.target.value as Settings["search"]["engine"] } })}>
+              <option value="ddg">DuckDuckGo (no key; scraped, may rate-limit)</option>
+              <option value="searxng">SearXNG (your own instance, JSON format enabled)</option>
+              <option value="brave">Brave Search API (key)</option>
+            </select>
+            {s.search.engine === "searxng" && <input className={inp} placeholder="https://searx.example.org" value={s.search.url} onChange={(e) => patch({ search: { ...s.search, url: e.target.value } })} />}
+            {s.search.engine === "brave" && <input className={inp} type="password" autoComplete="off" placeholder="Brave API key" value={s.search.key} onChange={(e) => patch({ search: { ...s.search, key: e.target.value } })} />}
+          </Section>
+
           <Section title="Context" hint="Max characters of chat history sent per request (about 4 per token). Older messages are dropped first.">
             <input className={inp + " w-40"} type="number" min={2000} step={2000} value={s.contextChars} onChange={(e) => patch({ contextChars: Math.max(2000, +e.target.value || 60000) })} />
           </Section>

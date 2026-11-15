@@ -11,6 +11,8 @@ export type Provider = {
 
 export type ModelRef = { providerId: string; model: string };
 
+export type Source = { title: string; url: string; snippet: string };
+
 export type Msg = {
   id: string;
   role: "user" | "assistant";
@@ -20,9 +22,14 @@ export type Msg = {
   ms?: number; // how long the model thought before answering
   error?: string;
   model?: string;
+  sources?: Source[];
+  status?: string; // transient, e.g. "Searching the web…"
 };
 
-export type Chat = { id: string; title: string; messages: Msg[]; updated: number };
+export type Chat = { id: string; title: string; messages: Msg[]; updated: number; projectId?: string };
+
+// Like Grok Projects: a named set of instructions + reference files shared by its chats.
+export type Project = { id: string; name: string; instructions: string; files: { name: string; text: string }[]; updated: number };
 
 export type Settings = {
   providers: Provider[];
@@ -31,4 +38,6 @@ export type Settings = {
   memory: string;
   theme: "system" | "dark" | "light";
   contextChars: number; // history budget sent to the model (~4 chars per token)
+  searchOn: boolean;
+  search: { engine: "ddg" | "searxng" | "brave"; url: string; key: string };
 };

@@ -5,13 +5,13 @@ export const uid = () => Math.random().toString(36).slice(2) + Date.now().toStri
 
 // localStorage-backed state. Client-only (the app is loaded with ssr:false).
 // shortcut: debounced 400ms write, so closing the tab mid-stream can lose the last tokens; upgrade to IndexedDB if chats get huge.
-export function usePersisted<T>(key: string, init: T) {
+export function usePersisted<T>(key: string, init: T, migrate: (v: T) => T = (v) => v) {
   const [v, setV] = useState<T>(() => {
     try {
       const s = localStorage.getItem(key);
       if (s) {
         const j = JSON.parse(s);
-        return (Array.isArray(init) ? j : { ...(init as object), ...j }) as T;
+        return migrate((Array.isArray(init) ? j : { ...(init as object), ...j }) as T);
       }
     } catch {}
     return init;

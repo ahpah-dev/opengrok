@@ -17,7 +17,7 @@ Not affiliated with xAI. "Grok" belongs to them; this is an independent look-ali
 
 ## Run
 
-Requires Node 20+.
+Requires Node 20+. On Windows, double-click `Start OpenGrok.bat` (installs, builds on first run, opens the browser).
 
 ```bash
 git clone https://github.com/ahpah-dev/opengrok && cd opengrok
